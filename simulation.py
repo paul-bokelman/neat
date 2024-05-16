@@ -11,7 +11,7 @@ def fitness(organism: 'Organism'):
 
 pop = Population(population_config, fitness)
 
-for _ in range(10):
+for _ in range(100):
     pop.evolve()
 
 print(pop)

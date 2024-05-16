@@ -38,58 +38,94 @@ class Organism:
 
     # randomly mutate the organism's structure or connection weights
     def mutate(self):
-        if chance(self.config['structural_mutation_chance']): # add new connection
+        if chance(self.config['structural_mutation_chance']):
+            # add or remove connection
             if chance(self.config['structural_connection_mutation_chance']):
-                # create a new connection
-                new_connection = ConnectionGene(nodes=self.nodes) #? check if connection already exists
-
-                # check for existing connections
-                for connection in self.genome:
-                    if new_connection.__eq__(connection):
-                        return
-
-                self.genome.append(new_connection)
-            else: # add new node (structural change)
-                # create a new node
-                new_node = NodeGene(id=len(self.nodes))
-                self.nodes.append(new_node)
-
-                if len(self.genome) > 0:
-                    # select a random connection and disable it
-                    random_connection = random.choice(self.genome)
-                    random_connection.disable()
-
-                    # connect the left side of the node back and assign decent weight
-                    left_connection = ConnectionGene(start=random_connection.start, end=new_node, weight=1)
-
-                    # connect the right side of the node forward and use previous weight
-                    right_connection = ConnectionGene(start=new_node, end=random_connection.end, weight=random_connection.weight)
-
-                    # add new connections to genome
-                    self.genome.append(left_connection)
-                    self.genome.append(right_connection)
-                else: # if no connections just add random connection
-                    new_connection = ConnectionGene(nodes=self.nodes)
-                    self.genome.append(new_connection)
+                self.structurally_mutate_connection()
+            else: # add or remove node
+                self.structurally_mutate_node()
+        
+        # normal mutation (not structural)
         else:
             # if chance hits (and there are hidden nodes) -> update random nodes activation function
-            if chance(self.config['activation_function_mutation_chance']) and len(self.nodes) > (self.config['inputs'] + self.config['outputs']): 
-                temp_nodes = self.nodes.copy()
-                random.shuffle(temp_nodes) # randomly shuffle nodes
+            if chance(self.config['activation_function_mutation_chance']) and self.has_hidden_nodes(): 
+               self.mutate_node()
+            elif self.has_connections():
+                # chance doesn't hit -> mutate the weight of a random connection (if there are any connections)
+                self.mutate_connection()
 
-                # find first hidden node and re-roll it's activation
-                for (index, node) in enumerate(temp_nodes):
-                    if node.type == NodeType.HIDDEN:
-                        node.roll_activation()
-                        temp_nodes[index] = node
-                        break
-                
-                self.nodes = temp_nodes
-            elif len(self.genome) > 0: # if at least one connection -> randomly change random connection weight
+            # just skip if everything misses...
+
+    # add or remove connection based on config chance (add if no connections, skip if trying to add duplicate connection)
+    def structurally_mutate_connection(self):
+        # add random connection if chance hits
+        if chance(self.config['structural_connection_addition_chance']) or len(self.genome) == 0:
+            new_connection = ConnectionGene(nodes=self.nodes)
+            # check for existing connections
+            for connection in self.genome:
+                # if connection already exists, just skip mutation...
+                if new_connection == connection:
+                    return
+
+            self.genome.append(new_connection)
+        else:
+            # remove random connection
+            random_connection = self.genome[random.randint(0, len(self.genome) - 1)]
+            self.genome.remove(random_connection)
+
+    # add or remove a node based on config chance
+    def structurally_mutate_node(self):
+        # chance hits or no hidden nodes -> add node
+        if chance(self.config['structural_node_addition_chance']) or not self.has_hidden_nodes():
+            # create a new node
+            new_node = NodeGene(id=len(self.nodes))
+            self.nodes.append(new_node)
+
+            # if connections exist -> randomly choose connection and place node in-between
+            if len(self.genome) > 0:
+                # select a random connection and disable it
                 random_connection = random.choice(self.genome)
-                random_connection.randomize_weight(factor=0.2)
-                # random_connection.nudge_weight() # incremental changes (to preserve importance?)
-            
+                random_connection.disable()
+
+                # connect the left side of the node back and assign decent weight
+                left_connection = ConnectionGene(start=random_connection.start, end=new_node, weight=1)
+
+                # connect the right side of the node forward and use previous weight
+                right_connection = ConnectionGene(start=new_node, end=random_connection.end, weight=random_connection.weight)
+
+                # add new connections to genome
+                self.genome.append(left_connection)
+                self.genome.append(right_connection)
+
+        # chance fails -> remove node (if there are hidden nodes)
+        elif self.has_hidden_nodes():
+            hidden_nodes = self.get_hidden_nodes()
+            (node, index) = hidden_nodes[random.randint(0, len(hidden_nodes) - 1)]
+
+            # remove node from list of nodes
+            self.nodes.pop(index)
+
+            # remove all connections to node
+            for connection in self.genome:
+                if connection.is_connected_to(node):
+                    self.genome.remove(connection)
+        
+    # randomize or nudge weight of random connection (if any exists)
+    def mutate_connection(self):
+        #? should have chance to enable connection too
+        # check if at least 1 connection
+        if len(self.genome) > 0:
+            random_connection = random.choice(self.genome)
+            random_connection.randomize_weight(factor=0.2)
+            # random_connection.nudge_weight() # could revert to this if more beneficial...
+
+    # mutate a node by re-rolling it's activation function (assuming there is at least 1 node)
+    def mutate_node(self):
+        hidden_nodes = self.get_hidden_nodes()
+        (node, index) = hidden_nodes[random.randint(0, len(hidden_nodes) - 1)]
+        node.roll_activation()
+
+        self.nodes[index] = node
 
     # Phenotype is network of nodes and connections (returns function)
     def phenotype(self) -> Callable[[list[float]], list[float]]:
@@ -140,6 +176,25 @@ class Organism:
         disjoint_connections = disjoint_connections + mutable_smaller_organism_genome
 
         return (nodes, shared_connections, disjoint_connections, excess_connections)
+    
+    # get list of all hidden nodes
+    def get_hidden_nodes(self):
+        pairs: list[tuple[NodeGene, int]] = []
+
+        # find first hidden node and re-roll it's activation
+        for (index, node) in enumerate(self.nodes):
+            if node.type == NodeType.HIDDEN:
+                pairs.append((node, index))
+
+        return pairs
+    
+    # check if there are hidden nodes in genome
+    def has_hidden_nodes(self):
+        return len(self.nodes) > (self.config['inputs'] + self.config['outputs'])
+    
+    # check if there are connections in genome
+    def has_connections(self):
+        return len(self.genome) > 0
     
     # pretty print organism
     def __str__(self, short: Optional[bool] = False) -> str:

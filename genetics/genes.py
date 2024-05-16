@@ -89,13 +89,16 @@ class ConnectionGene():
     # disable connection
     def disable(self):
         self.enabled = False
+
     # enable connection
     def enable(self):
         self.enabled = True
+
     # nudge weight in random direction (doesn't completely override weight)
     def nudge_weight(self, factor: Optional[float] = None): #todo: unused
         direction = -1 if random.randint(0, 1) == 0 else 1
         self.weight += direction * (factor if factor else 1)
+
     # randomize value of weight, optionally scale uniform value
     def randomize_weight(self, factor: Optional[float] = None):
         self.weight =  random.uniform(-1, 1) * (factor if factor else 1)
@@ -105,10 +108,15 @@ class ConnectionGene():
         if self.start.id > self.end.id:
             self.start, self.end = self.end, self.start
 
+    # check if connection is connected to node
+    def is_connected_to(self, node: 'NodeGene'):
+        return self.start == node or self.end == node
+
     # check if any two connections are equal
-    def __eq__(self, value: Self) -> bool:
-        # todo: could just compare innovation numbers?
-        return self.start.__eq__(value.start) and self.end.__eq__(value.end) or self.start.__eq__(value.end) and self.end.__eq__(value.start)
+    def __eq__(self, connection: Self) -> bool:
+        #? compare innovation numbers?
+        return self.start == connection.start and self.end == connection.end or self.start == connection.end and self.end == connection.start
+
     # string representation of connection
     def __str__(self) -> str:
         return f"inv: {self.innovation} | enabled: {self.enabled} | {self.start.id} -> {self.end.id}"
