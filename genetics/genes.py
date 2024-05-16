@@ -26,7 +26,14 @@ class NodeGene():
     def __init__(self, id: int, type: Optional[NodeType] = None) -> None:
         self.type = type if type else NodeType.HIDDEN
         self.id = id
-        self.activation: Callable[[float], float] = linear if type == NodeType.INPUT else random.choice(activation_functions)
+
+        if type == NodeType.INPUT:
+            self.activation = linear
+        else:
+            self.roll_activation()
+
+    def roll_activation(self):
+        self.activation = random.choice(activation_functions)
     def __call__(self, input: float) -> float:
         return self.activation(input)
     def __eq__(self, value: Self) -> bool:

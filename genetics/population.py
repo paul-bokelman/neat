@@ -40,7 +40,6 @@ class Population:
         population: list[Organism] = []
         # todo: don't replace species entirely, maintain them
 
-
         # put all members of population in a single list and calculate fitness
         for species in self.species:
             for organism in species.organisms:
@@ -115,7 +114,6 @@ class Population:
 
     # calculate genetic distance between two organisms
     def compatibility(self, o1: 'Organism', o2: 'Organism') -> float:
-
         # empty genome -> distance = 0 
         if len(o1.genome) == 0 and len(o2.genome) == 0:
             return 0

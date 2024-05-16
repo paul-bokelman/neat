@@ -20,6 +20,7 @@ population_config = {
         "outputs": 1, # number of outputs for nn
         "mutation_chance": 0.2, # chance for mutation to occur
         "structural_mutation_chance": 0.3, # given mutation -> chance that structural mutation occurs given
-        "structural_connection_mutation_chance": 0.95 # given structural mutation -> chance that connection is added, otherwise add node
+        "structural_connection_mutation_chance": 0.95, # given structural mutation -> chance that connection is added, otherwise add node
+        "activation_function_mutation_chance": 0.4 # given regular mutation -> chance to update a nodes activation function
     }
 }

@@ -1,6 +1,7 @@
 from typing import Optional, Callable
-from genetics.genes import ConnectionGene, NodeGene, NodeType
 import random
+import numpy as np
+from genetics.genes import ConnectionGene, NodeGene, NodeType
 from utils import chance
 from uuid import UUID, uuid4
 
@@ -69,14 +70,26 @@ class Organism:
                     self.genome.append(right_connection)
                 else: # if no connections just add random connection
                     new_connection = ConnectionGene(nodes=self.nodes)
-
                     self.genome.append(new_connection)
         else:
-            if len(self.genome) > 0:
-                #? should update multiple connections?
+            # if chance hits (and there are hidden nodes) -> update random nodes activation function
+            if chance(self.config['activation_function_mutation_chance']) and len(self.nodes) > (self.config['inputs'] + self.config['outputs']): 
+                temp_nodes = self.nodes.copy()
+                random.shuffle(temp_nodes) # randomly shuffle nodes
+
+                # find first hidden node and re-roll it's activation
+                for (index, node) in enumerate(temp_nodes):
+                    if node.type == NodeType.HIDDEN:
+                        node.roll_activation()
+                        temp_nodes[index] = node
+                        break
+                
+                self.nodes = temp_nodes
+            elif len(self.genome) > 0: # if at least one connection -> randomly change random connection weight
                 random_connection = random.choice(self.genome)
                 random_connection.randomize_weight(factor=0.2)
                 # random_connection.nudge_weight() # incremental changes (to preserve importance?)
+            
 
     # Phenotype is network of nodes and connections (returns function)
     def phenotype(self) -> Callable[[list[float]], list[float]]:
@@ -134,7 +147,6 @@ class Organism:
 
         if short:
             return organism_str
-
 
         organism_str += f"\n  Nodes ({len(self.nodes)}):"
         for node in self.nodes:
