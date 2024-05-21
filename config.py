@@ -1,17 +1,16 @@
 # each population has different config
 population_config = {
-    "population_size": 10, # initial and max population size
+    "population_size": 50, # initial and max population size
     "population_id": "rD594E", # random and unique database id
 
-    "species_target": 10, # target number of species in any given generation
-    "threshold_step": 0.5, # reduction step towards target number of species
+    "target_species": 7, # target number of species in any given generation (can't be larger than population size)
+    "threshold_step": 1, # reduction step towards target number of species
 
     # speciation division config
     "compatibility":{
-        "threshold": 2, # compatibility distance to declare different species 
-        "excess_factor": 1.0, 
-        "disjoint_factor": 1.0,
-        "weight_factor": 1.0
+        "excess_factor": 1.0, # how much the excess genes affect compatibility
+        "disjoint_factor": 1.0,  # how much the disjoint genes affect compatibility
+        "weight_factor": 1.0  # how much the sum of differences in connections affect compatibility
     },
     
     # species specific config (organism)

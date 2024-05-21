@@ -13,21 +13,28 @@ class Population:
         self.db = TinyDB(f"pop-{self.population_id}.json")
         self.species: list[Species] = []
         self.fitness_function = fitness_function
+
+        # todo: fix this ugly and unmanageable shit
         self.compatibility_config = {
-            "threshold": config['compatibility']['threshold'],
             "excess_factor": config['compatibility']['excess_factor'],
             "disjoint_factor": config['compatibility']['disjoint_factor'],
             "weight_factor": config['compatibility']['weight_factor']
         }
+        
         self.species_config = config['species']
         self.total_fitness = 0 # calculated on init and every evolution
         self.total_adjusted_fitness = 0
 
-        self.db.drop_tables() # clear db
+        # compatibility threshold and config for attaining target species
+        self.compatibility_threshold = 0
+        self.compatibility_threshold_step = config['threshold_step']
+        self.target_species = config['target_species']
+
+        # clear database (for need connections)
+        self.db.drop_tables()
 
         # create a new species, and add it to the population
         # evolve the population and redistribute the organisms into species
-
         initial_species = Species(self.species_config)
 
         # create initial population
@@ -41,6 +48,9 @@ class Population:
 
         # compute population fitness for this generation 
         self.compute_population_fitness()
+
+        # adjust compatibility threshold to normalize # of species to target
+        self.adjust_compatibility_threshold()
 
         # -------------------------------- speciation -------------------------------- #
         population: list[Organism] = []
@@ -66,7 +76,7 @@ class Population:
                 genetic_distance = self.compatibility(representative_organism, organism)
 
                 # if genetic distance between organisms is below threshold -> add to representative species
-                if genetic_distance < self.compatibility_config['threshold']:
+                if genetic_distance < self.compatibility_threshold:
                     species.add(organism)
                     population.remove(organism)
 
@@ -75,9 +85,10 @@ class Population:
 
         self.species = updated_species
 
+        # ------------------------- intermediate calculations ------------------------ #
         # calculate this generations total adjusted fitness (used to determine # of offspring)
         self.compute_population_adjusted_fitness_sum()
-
+            
         # ----------------- tournament and crossover for each species ---------------- #
         for (index, species) in enumerate(self.species):
             allowed_offspring = species.allowed_offspring(pop_total_adjusted_fitness=self.total_adjusted_fitness, population_size=self.population_size)
@@ -154,6 +165,19 @@ class Population:
         distance = (n_excess * excess_factor) / max_genome_size  + (n_disjoint * disjoint_factor) / max_genome_size + avg_weight * weight_factor
 
         return distance
+
+    # compute direction step and new compatibility threshold (if target is perfect -> skip)
+    def adjust_compatibility_threshold(self):
+
+        # if current number of species is equal to desired target then skip (threshold is in a good place)
+        if len(self.species) == self.target_species:
+            return
+
+        # if current number of species is higher then make it harder to split, otherwise make it easier
+        if len(self.species) > self.target_species:
+            self.compatibility_threshold += self.compatibility_threshold_step
+        else:
+            self.compatibility_threshold -= self.compatibility_threshold_step
     
     # get the best preforming organism in population
     def best(self):
