@@ -68,7 +68,7 @@ class ConnectionGene():
             raise ValueError("New connection needs nodes") # todo: handle this better
         
         # reorder nodes to properly identify connection
-        self.reorder() # todo: could be initialized in order
+        self.reorder() #? could be initialized in order
         
         db = TinyDB(f"pop-{population_config['population_id']}.json")
         Innovations = Query()

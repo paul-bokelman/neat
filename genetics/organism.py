@@ -5,21 +5,14 @@ from genetics.genes import ConnectionGene, NodeGene, NodeType
 from utils import chance
 from uuid import UUID, uuid4
 
-default_organism_config = { # todo: remove (should always get config from species)
-    "inputs": 3, 
-    "outputs": 1,
-    "structural_mutation_chance": 0.3, 
-    "structural_connection_mutation_chance": 0.95 
-}
-
 # Organism class (essentially genome)
 class Organism:
-    def __init__(self, species_id: UUID, config: Optional[dict] = None, genome: Optional[list[ConnectionGene]] = None, nodes: Optional[list[NodeGene]] = None) -> None:
+    def __init__(self, species_id: UUID, config: dict, genome: Optional[list[ConnectionGene]] = None, nodes: Optional[list[NodeGene]] = None) -> None:
         self.id = uuid4()
         self.species_id = species_id
         self.genome: list[ConnectionGene] = []
         self.nodes: list[NodeGene] = []
-        self.config = config if config else default_organism_config
+        self.config = config
         self.fitness = 0.0
         self.adjusted_fitness = 0.0
 
@@ -162,7 +155,6 @@ class Organism:
             c2 = next((c for c in mutable_smaller_organism_genome if c1 == c), None)
             if isinstance(c2, ConnectionGene): 
                 shared_connections.append((c1, c2))
-
                 # remove connection from smaller genome (smaller search space & leftovers -> disjoint)
                 mutable_smaller_organism_genome.remove(c1) 
             # check if excess gene
@@ -197,8 +189,8 @@ class Organism:
         return len(self.genome) > 0
     
     # pretty print organism
-    def __str__(self, short: Optional[bool] = False) -> str:
-        organism_str = f"Organism ({self.id}): nodes ({len(self.nodes)}) | connections ({len(self.genome)})"
+    def __str__(self, short = False) -> str:
+        organism_str = f"Organism: nodes ({len(self.nodes)}) | connections ({len(self.genome)}) | f: {self.fitness} | adjust f: {self.adjusted_fitness}"
 
         if short:
             return organism_str

@@ -4,13 +4,13 @@ from uuid import uuid4
 from tinydb import TinyDB
 from genetics.species import Species
 from genetics.organism import Organism
-from utils import random_exclude
+from utils import random_exclude, chance
 
 class Population:
     def __init__(self, config: dict, fitness_function: Callable[[Organism], float]):
         self.population_id = config['population_id'] if 'population_id' in config else uuid4()
         self.population_size = config['population_size']
-        self.db = TinyDB(f"pop-{self.population_id}.json") #? randomized db name?
+        self.db = TinyDB(f"pop-{self.population_id}.json")
         self.species: list[Species] = []
         self.fitness_function = fitness_function
         self.compatibility_config = {
@@ -20,6 +20,8 @@ class Population:
             "weight_factor": config['compatibility']['weight_factor']
         }
         self.species_config = config['species']
+        self.total_fitness = 0 # calculated on init and every evolution
+        self.total_adjusted_fitness = 0
 
         self.db.drop_tables() # clear db
 
@@ -30,22 +32,25 @@ class Population:
 
         # create initial population
         for _ in range(config['population_size']):
-            initial_species.add(Organism(self.species_config))
+            initial_species.add(Organism(species_id=initial_species.id, config=self.species_config))
 
         self.species.append(initial_species)
 
     # tournament selection -> crossover -> mutation -> speciation
     def evolve(self):
+
+        # compute population fitness for this generation 
+        self.compute_population_fitness()
+
         # -------------------------------- speciation -------------------------------- #
         population: list[Organism] = []
-        # todo: don't replace species entirely, maintain them
-
+    
         # put all members of population in a single list and calculate fitness
         for species in self.species:
             for organism in species.organisms:
-                organism.fitness = self.fitness(organism) 
                 population.append(organism)
 
+        # todo: don't replace species entirely, maintain them...
         updated_species: list[Species] = []
 
         # while there are still organisms that haven't been assigned to a species...
@@ -70,21 +75,26 @@ class Population:
 
         self.species = updated_species
 
-        # calculate global adjusted fitness average
-        global_fitness_average = 0
-        for species in self.species:
-            species.apply_adjusted_fitness()
-            global_fitness_average += species.average_fitness
+        # calculate this generations total adjusted fitness (used to determine # of offspring)
+        self.compute_population_adjusted_fitness_sum()
 
         # ----------------- tournament and crossover for each species ---------------- #
         for (index, species) in enumerate(self.species):
-            allowed_offspring = species.allowed_offspring(global_fitness_average, self.population_size)
+            allowed_offspring = species.allowed_offspring(pop_total_adjusted_fitness=self.total_adjusted_fitness, population_size=self.population_size)
+
             new_organisms: list[Organism] = []
 
             # if only 1 organism in species, copy it n times with possible mutation
             if len(species) < 2:
                 for _ in range(allowed_offspring):
-                    new_organisms.append(species.get(0))
+                    new_organism = species.get(0)
+
+                    if chance(self.species_config['mutation_chance']):
+                        new_organism.mutate()
+
+                    new_organisms.append(new_organism)
+                species.organisms = new_organisms
+                self.species[index] = species
                 continue
 
             # tournament selection for crossover candidates
@@ -96,7 +106,7 @@ class Population:
                 participant2 = species.get(p2_index)
 
                 # whoever has better fitness is added to candidate pool, loser is removed from species
-                if(self.fitness(participant1) > self.fitness(participant2)):
+                if(participant1.fitness > participant2.fitness):
                     candidates.append(participant1)
                 else:
                     candidates.append(participant2)
@@ -106,8 +116,10 @@ class Population:
             # crossover for all pairs of candidates
             for (parent1, parent2) in zip(candidates[:candidate_middle_index], candidates[candidate_middle_index:]):
                 organism = species.crossover(parent1, parent2)
+                organism.fitness = self.fitness(organism) # in-efficient - calculating fitness on birth...
                 new_organisms.append(organism)
 
+            # todo: should check if there are no organisms
             species.organisms = new_organisms
             self.species[index] = species
 
@@ -155,10 +167,24 @@ class Population:
     # user defined fitness function
     def fitness(self, organism: 'Organism'):
         return self.fitness_function(organism)
+    
+    # compute the populations average adjusted fitness (per generation)
+    def compute_population_adjusted_fitness_sum(self):
+        self.total_adjusted_fitness = 0
+        for species in self.species:
+            species.apply_adjusted_fitness()
+            self.total_adjusted_fitness += species.total_adjusted_fitness
 
-    def __str__(self) -> str:
+    # compute the fitness for every organism in the population
+    def compute_population_fitness(self):
+        for species in self.species:
+            for organism in species.organisms:
+                organism.fitness = self.fitness(organism)
+
+    def __str__(self, show_organisms = True) -> str:
         population_str = f'Population ({self.population_id}):'
+        population_str += f"\n  Total Organisms: {sum([len(s) for s in self.species])}"
         population_str += f"\n  Species ({len(self.species)})"
         for (index, species) in enumerate(self.species):
-            population_str += f'\n      ({index}) {species}'
+            population_str += f'\n    ({index}) {species.__str__(show_organisms=show_organisms)}'
         return population_str

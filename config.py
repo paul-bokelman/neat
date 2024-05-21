@@ -1,7 +1,7 @@
 # each population has different config
 population_config = {
-    "population_size": 10,
-    "population_id": "unique-id",
+    "population_size": 10, # initial and max population size
+    "population_id": "rD594E", # random and unique database id
 
     "species_target": 10, # target number of species in any given generation
     "threshold_step": 0.5, # reduction step towards target number of species

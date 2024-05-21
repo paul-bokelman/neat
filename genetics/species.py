@@ -1,26 +1,18 @@
-from typing import Optional
-import math
-import random
 from uuid import uuid4
 from genetics.organism import Organism
-from genetics.genes import ConnectionGene
-from utils import chance,random_exclude
-
-default_species_config = {
-    "inputs": 3, 
-    "outputs": 1,
-    "tournament_proportion": 0.8,
-    "mutation_chance": 0.2, 
-    "structural_mutation_chance": 0.3,
-    "structural_connection_mutation_chance": 0.95
-}
+from utils import chance, random_exclude
 
 class Species:
     def __init__(self, config: dict):
         self.id = uuid4() # could just increment id...
-        self.config = config if config else default_species_config
+        self.config = config
         self.organisms: list[Organism] = [] # members of species
+
+        # fitness for species
         self.average_fitness = 0.0
+        self.total_adjusted_fitness = 0.0
+        self.total_fitness = 0.0
+        self.average_adjusted_fitness = 0.0
         # self.generations_since_improvement = 0 # todo: implement penalization (prevent bloat)
 
     # crossover 2 organisms and produce a single organism
@@ -47,19 +39,25 @@ class Species:
 
     # apply adjusted fitness (fitness relative to species) to all organisms in species and find average adjusted fitness
     def apply_adjusted_fitness(self):
-        fitness_sum = 0
+        total_fitness = 0
+        total_adjusted_fitness = 0
         n_organisms = len(self.organisms)
         for organism in self.organisms:
             organism.adjusted_fitness = organism.fitness / n_organisms
-            fitness_sum += organism.fitness
+            total_fitness += organism.fitness
+            total_adjusted_fitness+= organism.adjusted_fitness
 
-        self.average_fitness = fitness_sum / n_organisms
+        self.average_fitness = total_fitness / n_organisms
+        self.average_adjusted_fitness = total_adjusted_fitness / n_organisms
+        self.total_fitness = total_fitness
+        self.total_adjusted_fitness = total_adjusted_fitness
 
     # calculate number of allowed offspring based on average fitness against population
-    def allowed_offspring(self, global_fitness_avg, population_size):
-        # probabilistically round allowed offspring up or down 
-        #? is this correct?
-        return int(math.floor((self.average_fitness / global_fitness_avg) * population_size + random.random()))
+    def allowed_offspring(self, pop_total_adjusted_fitness, population_size):
+        relative_fitness_proportion = self.total_adjusted_fitness / pop_total_adjusted_fitness
+        number_of_offspring = relative_fitness_proportion * population_size
+
+        return int(round(number_of_offspring))
 
     def add(self, organism):
         self.organisms.append(organism)
@@ -76,5 +74,10 @@ class Species:
     def __len__(self):
         return len(self.organisms)
     
-    def __str__(self):
-        return f'Species ({self.id}): organisms ({len(self.organisms)})'
+    def __str__(self, show_organisms = False, short_organisms = True):
+        species_str = f'Species ({self.id}): organisms ({len(self.organisms)}) | avg fit: {self.average_fitness} | adj sum: {self.total_adjusted_fitness}'
+        if show_organisms:
+            for o in self.organisms:
+                species_str += f'\n      {o.__str__(short=short_organisms)}'
+
+        return species_str
