@@ -1,9 +1,10 @@
 from uuid import uuid4
 from genetics.organism import Organism
 from utils import chance, random_exclude
+from config.configuration import PopulationConfig
 
 class Species:
-    def __init__(self, config: dict):
+    def __init__(self, config: 'PopulationConfig'):
         self.id = uuid4() # could just increment id...
         self.config = config
         self.organisms: list[Organism] = [] # members of species
@@ -13,6 +14,7 @@ class Species:
         self.total_adjusted_fitness = 0.0
         self.total_fitness = 0.0
         self.average_adjusted_fitness = 0.0
+
         # self.generations_since_improvement = 0 # todo: implement penalization (prevent bloat)
 
     # crossover 2 organisms and produce a single organism
@@ -28,10 +30,10 @@ class Species:
             else:
                 child_genome.append(c2)
 
-        child = Organism(self.id, self.config, genome=child_genome, nodes=nodes)
+        child = Organism(species_id=self.id, config=self.config, genome=child_genome, nodes=nodes)
 
         # random chance of mutation 
-        if chance(self.config['mutation_chance']):
+        if chance(self.config.get('organism').get('mutation_chance')):
             child.mutate()
 
         #? would be nice to just append directly to this array but I think this is easier...

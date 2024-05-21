@@ -1,10 +1,13 @@
 from genetics.population import Population
 from genetics.organism import Organism
-from config import population_config
+from config.configuration import Configuration
 import random
 from utils import chance
 
 generations = 10
+
+pop_config = Configuration("./config/pop1.yaml").get()
+# pop2_config = Configuration("./config/pop2.yaml").get()
 
 # only positive values... if all members have fitness of 0 -> division by zero..
 def fitness(organism: 'Organism'):
@@ -16,7 +19,7 @@ def fitness(organism: 'Organism'):
     # only positive values...
     return organism.fitness
 
-pop = Population(population_config, fitness)
+pop = Population(pop_config, fitness)
 
 for i in range(generations):
     pop.evolve()

@@ -1,9 +1,8 @@
-from typing import Optional, Callable, Self
+from typing import Optional, Self
 from enum import Enum
 import math
 import random
 from tinydb import TinyDB, Query
-from config import population_config #! should be inherited from population
 
 # activation functions (move this)
 def sigmoid(x: float): 
@@ -22,7 +21,7 @@ class NodeType(Enum):
     OUTPUT = 2
     HIDDEN = 3
 
-class NodeGene():
+class NodeGene:
     def __init__(self, id: int, type: Optional[NodeType] = None) -> None:
         self.type = type if type else NodeType.HIDDEN
         self.id = id
@@ -42,8 +41,8 @@ class NodeGene():
         return f"id: {self.id} | type: {self.type.name} | f: {self.activation.__name__}"
 
 
-class ConnectionGene():
-    def __init__(self, nodes: Optional[list[NodeGene]] = None, weight: Optional[float] = None, start: Optional[NodeGene] = None, end: Optional[NodeGene] = None) -> None:
+class ConnectionGene:
+    def __init__(self, population_name: str, nodes: Optional[list[NodeGene]] = None, weight: Optional[float] = None, start: Optional[NodeGene] = None, end: Optional[NodeGene] = None) -> None:
         self.weight = weight if weight else random.uniform(-1, 1)
         self.enabled = True
         self.innovation: int = 0
@@ -65,12 +64,13 @@ class ConnectionGene():
                 self.end = node
                 break
         else:
-            raise ValueError("New connection needs nodes") # todo: handle this better
+            raise ValueError("New connection needs nodes")
         
         # reorder nodes to properly identify connection
         self.reorder() #? could be initialized in order
         
-        db = TinyDB(f"pop-{population_config['population_id']}.json")
+        #? I don't like receiving population name like this...
+        db = TinyDB(f"{population_name}-db.json")
         Innovations = Query()
 
         # check if connection exists

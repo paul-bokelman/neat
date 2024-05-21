@@ -1,45 +1,40 @@
 from typing import Callable
 import random
-from uuid import uuid4
 from tinydb import TinyDB
 from genetics.species import Species
 from genetics.organism import Organism
 from utils import random_exclude, chance
+from config.configuration import PopulationConfig
 
 class Population:
-    def __init__(self, config: dict, fitness_function: Callable[[Organism], float]):
-        self.population_id = config['population_id'] if 'population_id' in config else uuid4()
-        self.population_size = config['population_size']
-        self.db = TinyDB(f"pop-{self.population_id}.json")
+    def __init__(self, config: 'PopulationConfig', fitness_function: Callable[[Organism], float]):
+        self.config = config
+        self.name = config.get('name')
+        self.carrying_capacity = config.get('carrying_capacity')
+        self.db = TinyDB(f"{self.name}-db.json")
         self.species: list[Species] = []
         self.fitness_function = fitness_function
 
         # todo: fix this ugly and unmanageable shit
-        self.compatibility_config = {
-            "excess_factor": config['compatibility']['excess_factor'],
-            "disjoint_factor": config['compatibility']['disjoint_factor'],
-            "weight_factor": config['compatibility']['weight_factor']
-        }
         
-        self.species_config = config['species']
         self.total_fitness = 0 # calculated on init and every evolution
         self.total_adjusted_fitness = 0
 
         # compatibility threshold and config for attaining target species
         self.compatibility_threshold = 0
-        self.compatibility_threshold_step = config['threshold_step']
-        self.target_species = config['target_species']
+        self.compatibility_threshold_step = config.get('speciation').get('threshold_step')
+        self.target_species = config.get('speciation').get('target_species')
 
         # clear database (for need connections)
         self.db.drop_tables()
 
         # create a new species, and add it to the population
         # evolve the population and redistribute the organisms into species
-        initial_species = Species(self.species_config)
+        initial_species = Species(config=self.config)
 
         # create initial population
-        for _ in range(config['population_size']):
-            initial_species.add(Organism(species_id=initial_species.id, config=self.species_config))
+        for _ in range(self.config.get('carrying_capacity')):
+            initial_species.add(Organism(species_id=initial_species.id, config=self.config))
 
         self.species.append(initial_species)
 
@@ -68,7 +63,7 @@ class Population:
             # get random "representative" organism and remove it from the population
             representative_organism_index = random.randint(0, len(population)) - 1
             representative_organism = population.pop(representative_organism_index)
-            species = Species(self.species_config)
+            species = Species(config=self.config)
             species.add(representative_organism)
 
             # check genetic distance between representative and all remaining organisms in population
@@ -91,7 +86,7 @@ class Population:
             
         # ----------------- tournament and crossover for each species ---------------- #
         for (index, species) in enumerate(self.species):
-            allowed_offspring = species.allowed_offspring(pop_total_adjusted_fitness=self.total_adjusted_fitness, population_size=self.population_size)
+            allowed_offspring = species.allowed_offspring(pop_total_adjusted_fitness=self.total_adjusted_fitness, population_size=self.config.get('carrying_capacity'))
 
             new_organisms: list[Organism] = []
 
@@ -100,7 +95,7 @@ class Population:
                 for _ in range(allowed_offspring):
                     new_organism = species.get(0)
 
-                    if chance(self.species_config['mutation_chance']):
+                    if chance(self.config.get('organism').get('mutation_chance')):
                         new_organism.mutate()
 
                     new_organisms.append(new_organism)
@@ -158,9 +153,9 @@ class Population:
             avg_weight = 0
 
         max_genome_size = max(len(o1.genome), len(o2.genome)) # larger genome length
-        excess_factor = self.compatibility_config['excess_factor'] # excess factor
-        disjoint_factor = self.compatibility_config['disjoint_factor'] # disjoint factor
-        weight_factor = self.compatibility_config['weight_factor'] # weight factor
+        excess_factor = self.config.get('speciation').get('excess_factor') # excess factor
+        disjoint_factor = self.config.get('speciation').get('disjoint_factor') # disjoint factor
+        weight_factor = self.config.get('speciation').get('weight_factor') # weight factor
  
         distance = (n_excess * excess_factor) / max_genome_size  + (n_disjoint * disjoint_factor) / max_genome_size + avg_weight * weight_factor
 
@@ -206,7 +201,7 @@ class Population:
                 organism.fitness = self.fitness(organism)
 
     def __str__(self, show_organisms = True) -> str:
-        population_str = f'Population ({self.population_id}):'
+        population_str = f"Population ({self.config.get('name')}):"
         population_str += f"\n  Total Organisms: {sum([len(s) for s in self.species])}"
         population_str += f"\n  Species ({len(self.species)})"
         for (index, species) in enumerate(self.species):
