@@ -15,8 +15,6 @@ class Population:
         self.species: list[Species] = []
         self.fitness_function = fitness_function
 
-        # todo: fix this ugly and unmanageable shit
-        
         self.total_fitness = 0 # calculated on init and every evolution
         self.total_adjusted_fitness = 0
 

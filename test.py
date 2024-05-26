@@ -3,12 +3,15 @@ import numpy as np
 from uuid import uuid4
 from config.configuration import Configuration
 from genetics.organism import Organism
-from genetics.genes import NodeGene, ConnectionGene, NodeType, sigmoid, relu
+from genetics.genes import NodeGene, ConnectionGene, NodeType
+from nn.activations import ActivationFunction, ActivationFunctions
 
 # feedforward network test cases
 class TestNetwork(unittest.TestCase):
     def __init__(self, methodName: str = "runTest") -> None:
         pop_config = Configuration("./config/pop1.yaml").get()
+        reLu = ActivationFunction(ActivationFunctions.ReLu)
+        sigmoid = ActivationFunction(ActivationFunctions.Sigmoid)
 
         self.nodes = [
             NodeGene(id=0, type=NodeType.INPUT),
@@ -17,8 +20,8 @@ class TestNetwork(unittest.TestCase):
             NodeGene(id=3, type=NodeType.OUTPUT, activation=sigmoid),
             NodeGene(id=4, type=NodeType.OUTPUT, activation=sigmoid),
             NodeGene(id=5, type=NodeType.OUTPUT, activation=sigmoid),
-            NodeGene(id=6, type=NodeType.HIDDEN, activation=relu),
-            NodeGene(id=7, type=NodeType.HIDDEN, activation=relu),
+            NodeGene(id=6, type=NodeType.HIDDEN, activation=reLu),
+            NodeGene(id=7, type=NodeType.HIDDEN, activation=reLu)
         ]
 
         genome = [
@@ -38,8 +41,8 @@ class TestNetwork(unittest.TestCase):
         self.inputs = [0.2, 1.4, 0.7]
         i0, i1, i2 = self.inputs[0], self.inputs[1], self.inputs[2]
 
-        h6 = relu(i0*2 + i1*1)
-        h7 = relu(i2*0.4)
+        h6 = reLu(i0*2 + i1*1)
+        h7 = reLu(i2*0.4)
 
         o3 = sigmoid(h7*1)
         o4 = sigmoid(h6*0.1 + h7*2)

@@ -1,20 +1,8 @@
 from typing import Optional, Self, Callable
 from enum import Enum
-import math
 import random
 from tinydb import TinyDB, Query
-
-# activation functions (move this)
-def sigmoid(x: float): 
-    return 1 / (1 + math.exp(-x))
-def tanh(x: float):
-    return math.tanh(x)
-def relu(x: float):
-    return max(0, x)
-def linear(x: float):
-    return x
-
-activation_functions = [sigmoid, tanh, relu, linear]
+from nn.activations import ActivationFunction, ActivationFunctions
 
 class NodeType(Enum):
     INPUT = 1
@@ -22,14 +10,14 @@ class NodeType(Enum):
     HIDDEN = 3
 
 class NodeGene:
-    def __init__(self, id: int, type: Optional[NodeType] = None, activation: Optional[Callable[[float], float]] = None) -> None:
+    def __init__(self, id: int, type: Optional[NodeType] = None, activation: Optional[ActivationFunction] = None) -> None:
         self.type = type if type else NodeType.HIDDEN
         self.id = id
         self.value: Optional[float] = None
 
         # input node activation is always linear
         if type == NodeType.INPUT:
-            self.activation = linear
+            self.activation = ActivationFunction(ActivationFunctions.Linear)
         elif activation:
             self.activation = activation
         else:
@@ -37,7 +25,7 @@ class NodeGene:
 
     # randomly choose a different activation function
     def roll_activation(self):
-        self.activation = random.choice(activation_functions)
+        self.activation = ActivationFunction()
 
     # apply activation function to input value and assign to node
     def activate(self, input: float):
@@ -54,7 +42,7 @@ class NodeGene:
         return self.id == node.id
     
     def __str__(self) -> str:
-        return f"id: {self.id} | type: {self.type.name} | f: {self.activation.__name__} | Value: {self.value}"
+        return f"id: {self.id} | type: {self.type.name} | f: {self.activation} | Value: {self.value}"
 
 
 class ConnectionGene:
