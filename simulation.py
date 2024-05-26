@@ -23,5 +23,3 @@ pop = Population(pop_config, fitness)
 
 for i in range(generations):
     pop.evolve()
-
-out = pop.species[0].organisms[0].phenotype().propagate([1.2, 3.4, 0.2])

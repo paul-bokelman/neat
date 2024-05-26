@@ -3,6 +3,7 @@ from genetics.organism import Organism
 from utils import chance, random_exclude
 from config.configuration import PopulationConfig
 
+# collection of organisms for greater genetic diversity
 class Species:
     def __init__(self, config: 'PopulationConfig'):
         self.id = uuid4() # could just increment id...
@@ -36,7 +37,6 @@ class Species:
         if chance(self.config.get('organism').get('mutation_chance')):
             child.mutate()
 
-        #? would be nice to just append directly to this array but I think this is easier...
         return child
 
     # apply adjusted fitness (fitness relative to species) to all organisms in species and find average adjusted fitness
@@ -61,21 +61,27 @@ class Species:
 
         return int(round(number_of_offspring))
 
+    # add an organism to the end of the species list 
     def add(self, organism):
         self.organisms.append(organism)
 
+    # get an organism from the species by its index
     def get(self, index):
         return self.organisms[index]
     
+    # remove an organism from the species by its index
     def remove(self, index):
         self.organisms.pop(index)
 
+    # get a random organism in the species 
     def get_random(self, *exclude):
         return self.get(random_exclude(0, len(self.organisms) - 1, exclude))
 
+    # find how many organisms are in species
     def __len__(self):
         return len(self.organisms)
     
+    # string representation of species
     def __str__(self, show_organisms = False, short_organisms = True):
         species_str = f'Species ({self.id}): organisms ({len(self.organisms)}) | avg fit: {self.average_fitness} | adj sum: {self.total_adjusted_fitness}'
         if show_organisms:

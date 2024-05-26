@@ -26,6 +26,7 @@ PopulationConfig = TypedDict('PopulationConfig', {
     "organism": OrganismConfig
 })
 
+# population configuration helper
 class Configuration:
     def __init__(self, location: str) -> None:  
         self.config: PopulationConfig

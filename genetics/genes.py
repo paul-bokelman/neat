@@ -4,11 +4,13 @@ import random
 from tinydb import TinyDB, Query
 from nn.activations import ActivationFunction, ActivationFunctions
 
+# node type identifier
 class NodeType(Enum):
     INPUT = 1
     OUTPUT = 2
     HIDDEN = 3
 
+# node gene for organism (activation functions)
 class NodeGene:
     def __init__(self, id: int, type: Optional[NodeType] = None, activation: Optional[ActivationFunction] = None) -> None:
         self.type = type if type else NodeType.HIDDEN
@@ -35,16 +37,19 @@ class NodeGene:
     def clear(self):
         self.value = None
 
+    # directly call the activation function for this node
     def __call__(self, input: float) -> float:
         return self.activation(input)
     
+    # check if any two nodes are equal (compare unique id)
     def __eq__(self, node: Self) -> bool:
         return self.id == node.id
     
+    # string representation of node
     def __str__(self) -> str:
         return f"id: {self.id} | type: {self.type.name} | f: {self.activation} | Value: {self.value}"
 
-
+# connection gene for organisms genomes (connections between nodes)
 class ConnectionGene:
     def __init__(self, population_name: str, nodes: Optional[list[NodeGene]] = None, weight: Optional[float] = None, start: Optional[NodeGene] = None, end: Optional[NodeGene] = None, enabled: bool = True) -> None:
         self.weight = weight if weight else random.uniform(-1, 1)

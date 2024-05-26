@@ -192,7 +192,7 @@ class Organism:
     def has_connections(self):
         return len(self.genome) > 0
     
-    # pretty print organism
+    # string representation of organism
     def __str__(self, short = False) -> str:
         organism_str = f"Organism: nodes ({len(self.nodes)}) | connections ({len(self.genome)}) | f: {self.fitness} | adjust f: {self.adjusted_fitness}"
 

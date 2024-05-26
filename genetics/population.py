@@ -6,6 +6,7 @@ from genetics.organism import Organism
 from utils import random_exclude, chance
 from config.configuration import PopulationConfig
 
+# population controller for continued evolution of organisms through speciation and crossover
 class Population:
     def __init__(self, config: 'PopulationConfig', fitness_function: Callable[[Organism], float]):
         self.config = config
@@ -198,6 +199,7 @@ class Population:
             for organism in species.organisms:
                 organism.fitness = self.fitness(organism)
 
+    # string representation of population
     def __str__(self, show_organisms = True) -> str:
         population_str = f"Population ({self.config.get('name')}):"
         population_str += f"\n  Total Organisms: {sum([len(s) for s in self.species])}"
