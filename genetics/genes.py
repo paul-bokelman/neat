@@ -1,4 +1,4 @@
-from typing import Optional, Self
+from typing import Optional, Self, Callable
 from enum import Enum
 import math
 import random
@@ -22,29 +22,45 @@ class NodeType(Enum):
     HIDDEN = 3
 
 class NodeGene:
-    def __init__(self, id: int, type: Optional[NodeType] = None) -> None:
+    def __init__(self, id: int, type: Optional[NodeType] = None, activation: Optional[Callable[[float], float]] = None) -> None:
         self.type = type if type else NodeType.HIDDEN
         self.id = id
+        self.value: Optional[float] = None
 
+        # input node activation is always linear
         if type == NodeType.INPUT:
             self.activation = linear
+        elif activation:
+            self.activation = activation
         else:
             self.roll_activation()
 
+    # randomly choose a different activation function
     def roll_activation(self):
         self.activation = random.choice(activation_functions)
+
+    # apply activation function to input value and assign to node
+    def activate(self, input: float):
+        self.value = self.activation(input)
+
+    # reset the nodes value
+    def clear(self):
+        self.value = None
+
     def __call__(self, input: float) -> float:
         return self.activation(input)
-    def __eq__(self, value: Self) -> bool:
-        return self.id == value.id
+    
+    def __eq__(self, node: Self) -> bool:
+        return self.id == node.id
+    
     def __str__(self) -> str:
-        return f"id: {self.id} | type: {self.type.name} | f: {self.activation.__name__}"
+        return f"id: {self.id} | type: {self.type.name} | f: {self.activation.__name__} | Value: {self.value}"
 
 
 class ConnectionGene:
-    def __init__(self, population_name: str, nodes: Optional[list[NodeGene]] = None, weight: Optional[float] = None, start: Optional[NodeGene] = None, end: Optional[NodeGene] = None) -> None:
+    def __init__(self, population_name: str, nodes: Optional[list[NodeGene]] = None, weight: Optional[float] = None, start: Optional[NodeGene] = None, end: Optional[NodeGene] = None, enabled: bool = True) -> None:
         self.weight = weight if weight else random.uniform(-1, 1)
-        self.enabled = True
+        self.enabled = enabled
         self.innovation: int = 0
 
         if start and end:
@@ -105,7 +121,14 @@ class ConnectionGene:
     
     # reorder nodes, if start node is greater than end node, swap them
     def reorder(self):
-        if self.start.id > self.end.id:
+        # if end is of type input then swap (input is always start)
+        if self.end.type == NodeType.INPUT:
+            self.start, self.end = self.end, self.start
+        # if start is of type output then swap (output is always end)
+        elif self.start.type == NodeType.OUTPUT:
+            self.start, self.end = self.end, self.start
+        # if both nodes are hidden then numerically order
+        elif self.start.type == NodeType.HIDDEN and self.end.type == NodeType.HIDDEN and self.start.id > self.end.id:
             self.start, self.end = self.end, self.start
 
     # check if connection is connected to node
@@ -119,6 +142,6 @@ class ConnectionGene:
 
     # string representation of connection
     def __str__(self) -> str:
-        return f"inv: {self.innovation} | enabled: {self.enabled} | {self.start.id} -> {self.end.id}"
+        return f"inv: {self.innovation} | enabled: {self.enabled} | {self.start.id} -> {self.end.id} | W: {self.weight}"
 
     

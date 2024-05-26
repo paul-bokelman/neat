@@ -1,7 +1,7 @@
+import random
+from config.configuration import Configuration
 from genetics.population import Population
 from genetics.organism import Organism
-from config.configuration import Configuration
-import random
 from utils import chance
 
 generations = 10
@@ -24,4 +24,4 @@ pop = Population(pop_config, fitness)
 for i in range(generations):
     pop.evolve()
 
-print(pop.__str__(show_organisms=False))
+out = pop.species[0].organisms[0].phenotype().propagate([1.2, 3.4, 0.2])

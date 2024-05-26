@@ -1,9 +1,10 @@
 from typing import Optional, Callable
 import random
 from uuid import UUID, uuid4
-from genetics.genes import ConnectionGene, NodeGene, NodeType
-from utils import chance
 from config.configuration import PopulationConfig
+from genetics.genes import ConnectionGene, NodeGene, NodeType
+from nn.network import FeedForwardNetwork
+from utils import chance
 
 # Organism class (essentially genome)
 class Organism:
@@ -127,13 +128,9 @@ class Organism:
 
         self.nodes[index] = node
 
-    # Phenotype is network of nodes and connections (returns function)
-    def phenotype(self) -> Callable[[list[float]], list[float]]:
-        connections = self.genome.copy()
-        def network(inputs: list[float]) -> list[float]:
-            output = []
-            return output
-        return network
+    # return feed forward neural network as phenotype
+    def phenotype(self) -> FeedForwardNetwork:
+        return FeedForwardNetwork(n_inputs=self.config.get('inputs'), nodes=self.nodes, connections=self.genome)
     
     # return shared nodes and shared, disjoint, excess connections between organisms
     def gene_distribution(self, other_organism: 'Organism'):
